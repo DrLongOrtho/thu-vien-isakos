@@ -240,14 +240,16 @@ function listView(m, v, focus){
       `<button class="cs" data-k="${name}" data-v="${esc(x)}" aria-pressed="${(f[name] || "") === x}">${esc(lab)}</button>`).join("")}</div>` : "";
   const groups = m === "hn" ? (tracks.length ? tracks : ["Khác"]) : courses;
   const gOf = s => m === "hn" ? s.tr[0] : s.c;
-  $("#app").innerHTML = `<div class="head"><div class="crumb"><a href="#/">Thư viện</a><span class="sep">›</span><span>${MODES[m]}</span></div>
-      <h1>${esc(v)}</h1><p class="stats">${countL(L)} bài giảng · ${L.length} phiên · ${hrs(durL(L))} giờ video</p>
-      ${chips("tp", topics, "Mọi chủ đề")}${chips("c", courses, "Mọi hội nghị")}${chips("t", tracks, "Mọi chuyên đề")}</div>
-    ${groups.map(g => { const seen = new Set();
+  let nSes = 0;
+  const body = groups.map(g => { const seen = new Set();
         const G = shown.filter(([s]) => gOf(s) === g).map(([s, idx]) => [s, idx.filter(i => !seen.has(ikey(s.items[i])) && seen.add(ikey(s.items[i])))])
                        .filter(([s, idx]) => idx.length);
-        return G.length ? `<h2 class="course">${esc(g)}</h2>` + G.map(([s, idx]) => sessionCard(m, v, s, idx)).join("") : ""; }).join("")
-      || `<div class="empty">Chưa có bài giảng trong mục này.</div>`}`;
+        nSes += G.length;
+        return G.length ? `<h2 class="course">${esc(g)}</h2>` + G.map(([s, idx]) => sessionCard(m, v, s, idx)).join("") : ""; }).join("");
+  $("#app").innerHTML = `<div class="head"><div class="crumb"><a href="#/">Thư viện</a><span class="sep">›</span><span>${MODES[m]}</span></div>
+      <h1>${esc(v)}</h1><p class="stats">${countL(shown)} bài giảng · ${nSes} phiên · ${hrs(durL(shown))} giờ video</p>
+      ${chips("tp", topics, "Mọi chủ đề")}${chips("c", courses, "Mọi hội nghị")}${chips("t", tracks, "Mọi chuyên đề")}</div>
+    ${body || `<div class="empty">Chưa có bài giảng trong mục này.</div>`}`;
   document.querySelectorAll(".cs").forEach(b => b.onclick = () => { f[b.dataset.k] = b.dataset.v; store.set(key, JSON.stringify(f)); listView(m, v); });
   document.querySelectorAll(".more").forEach(b => b.onclick = () => { openS.add(b.dataset.open); const y = scrollY; listView(m, v); scrollTo(0, y); });
   if (focus) { const el = document.getElementById(focus); if (el) { el.scrollIntoView({block:"start"}); el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1600); } }
