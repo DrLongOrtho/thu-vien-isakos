@@ -194,8 +194,9 @@ function sessionCard(t, s){
 function home(){
   navTracks("");
   const all = CAT.sessions;
-  $("#app").innerHTML = `<div class="head"><h1>Thư viện bài giảng có phụ đề tiếng Việt</h1>
-      <p class="stats">${talksOf(all)} bài giảng · ${all.length} phiên · ${hrs(durOf(all))} giờ video. Chọn chuyên đề để xem theo từng phiên.</p></div>
+  $("#app").innerHTML = `<div class="head"><h1>Thư viện bài giảng ISAKOS</h1>
+      <p class="stats">Hội nghị, webinar và trình diễn phẫu thuật — phụ đề tiếng Việt, xếp theo chuyên đề.</p>
+      <p class="note" style="margin:4px 0 0">${talksOf(all)} bài giảng · ${hrs(durOf(all))} giờ video</p></div>
     <div class="home">${CAT.tracks.map(t => { const L = inTrack(t);
       return `<a class="tile" href="#/${enc(t)}"><b>${esc(t)}</b><span>${talksOf(L)} bài · ${L.length} phiên · ${hrs(durOf(L))} giờ</span></a>`; }).join("")}</div>`;
 }
