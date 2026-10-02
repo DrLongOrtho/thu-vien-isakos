@@ -94,6 +94,8 @@ h2.course:after{content:"";flex:1;height:1px;background:var(--line)}
 .tile b{font-size:17px;display:block}
 .tile span{color:var(--muted);font-size:13.5px}
 .empty{padding:60px 0;text-align:center;color:var(--muted)}
+.more{display:block;width:100%;border:0;border-top:1px solid var(--line);background:var(--surface);padding:10px;cursor:pointer;color:var(--accent);font-weight:600}
+.more:hover{background:var(--accent-soft)}
 
 /* trang bài */
 .player{position:relative;aspect-ratio:16/9;background:#000;border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow);margin-top:14px}
@@ -155,7 +157,7 @@ const store = { get(k, d){ try { const v = localStorage.getItem("tv." + k); retu
 const toast = m => { const t = $("#toast"); t.textContent = m; t.classList.add("on"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), 1800); };
 const enc = encodeURIComponent;
 
-let CAT = null, SES = {}, listScroll = {};
+let CAT = null, SES = {}, listScroll = {}, openS = new Set();
 const th = store.get("theme", ""); if (th) document.documentElement.dataset.theme = th;
 $("#theme").onclick = () => {
   const dark = document.documentElement.dataset.theme ? document.documentElement.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
@@ -185,7 +187,8 @@ function sessionCard(t, s){
   const d = s.items.reduce((a, i) => a + i.d, 0);
   return `<section class="session" id="${s.k}"><div class="sh"><h3>${esc(s.t)}</h3>${s.e !== s.t ? `<div class="en">${esc(s.e)}</div>` : ""}
     <div class="tags">${s.f ? `<span class="tag">${esc(s.f)}</span>` : ""}<span class="tag">${s.items.length} bài</span><span class="tag">${clock(d)}</span></div></div>
-    ${s.items.map((it, i) => talkRow(t, s, it, i)).join("")}</section>`;
+    ${s.items.slice(0, s.items.length > 12 && !openS.has(s.k) ? 10 : 1e9).map((it, i) => talkRow(t, s, it, i)).join("")}
+    ${s.items.length > 12 && !openS.has(s.k) ? `<button class="more" data-open="${s.k}">Xem tất cả ${s.items.length} bài ▾</button>` : ""}</section>`;
 }
 
 function home(){
@@ -208,6 +211,7 @@ function trackView(t, focus){
         `<button class="cs" data-c="${esc(c)}" aria-pressed="${c===cur}">${esc(c)}</button>`).join("")}</div>` : ""}</div>
     ${courses.filter(c => !cur || c === cur).map(c => `<h2 class="course">${esc(c)}</h2>` + shown.filter(s => s.c === c).map(s => sessionCard(t, s)).join("")).join("")}`;
   document.querySelectorAll(".cs").forEach(b => b.onclick = () => { store.set("course." + t, b.dataset.c); trackView(t); });
+  document.querySelectorAll(".more").forEach(b => b.onclick = () => { openS.add(b.dataset.open); const y = scrollY; trackView(t); scrollTo(0, y); });
   if (focus) { const el = document.getElementById(focus); if (el) { el.scrollIntoView({block:"start"}); el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1600); } }
 }
 
