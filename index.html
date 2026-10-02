@@ -54,6 +54,9 @@ button,input{font:inherit;color:inherit}
 @media (max-width:720px){ .tracks{top:0;position:relative} }
 .tracks .wrap{display:flex;gap:8px;overflow-x:auto;padding-top:10px;padding-bottom:10px;scrollbar-width:none}
 .tracks .wrap::-webkit-scrollbar{display:none}
+.modes{flex:none;display:inline-flex;border:1px solid var(--line);border-radius:99px;overflow:hidden;background:var(--surface);margin-right:4px}
+.md{border:0;background:none;padding:6px 13px;cursor:pointer;font-size:13.5px;font-weight:600;color:var(--muted);white-space:nowrap}
+.md[aria-selected="true"]{background:var(--ink);color:var(--surface)}
 .tk{flex:none;text-decoration:none;border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:6px 14px;font-size:14px;white-space:nowrap}
 .tk small{color:var(--faint);margin-left:5px}
 .tk[aria-current="page"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
@@ -142,7 +145,7 @@ footer{border-top:1px solid var(--line);color:var(--faint);font-size:13px;paddin
     <input id="q" type="search" placeholder="Tìm bài giảng, diễn giả, nội dung…" autocomplete="off" aria-label="Tìm kiếm"></label>
   <button class="theme" id="theme" type="button" aria-label="Đổi giao diện sáng/tối"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button>
 </div></header>
-<nav class="tracks" aria-label="Chuyên đề"><div class="wrap" id="tracks"></div></nav>
+<nav class="tracks" aria-label="Cách xem: chuyên đề, hội nghị, hình thức"><div class="wrap" id="tracks"></div></nav>
 <main class="wrap" id="app"><div class="empty">Đang tải thư viện…</div></main>
 <footer><div class="wrap" id="foot">Bản quyền nội dung thuộc ISAKOS và các diễn giả. Dịch bởi Bs. Bảo Long.</div></footer>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -167,81 +170,112 @@ $("#theme").onclick = () => {
 
 function route(){ const h = decodeURIComponent(location.hash.replace(/^#\/?/, "")); const [path, qs] = h.split("?");
   return { parts: (path || "").split("/").filter(Boolean), q: new URLSearchParams(qs || "").get("q") || "" }; }
-const inTrack = t => CAT.sessions.filter(s => !t || s.tr.includes(t));
-const talksOf = list => list.reduce((a, s) => a + s.items.length, 0);
-const durOf = list => list.reduce((a, s) => a + s.items.reduce((b, i) => b + i.d, 0), 0);
-const talkLink = (t, s, i) => `#/${enc(t || s.tr[0])}/${s.k}/${i}`;
+const MODES = {cd: "Chuyên đề", hn: "Hội nghị", ht: "Hình thức"};
+let navMode = store.get("mode", "cd");
+const values = m => m === "cd" ? CAT.tracks : m === "hn" ? CAT.courses : CAT.formats;
+function inGroup(m, v){                      // → [[phiên, [số thứ tự bài thuộc nhóm]], …]
+  return CAT.sessions.map(s => {
+    if (m === "cd" && !s.tr.includes(v)) return null;
+    if (m === "hn" && s.c !== v) return null;
+    let idx = s.items.map((_, i) => i);
+    if (m === "ht") { idx = idx.filter(i => s.items[i].f === v); if (!idx.length) return null; }
+    return [s, idx]; }).filter(Boolean);
+}
+const countL = L => L.reduce((a, [s, idx]) => a + idx.length, 0);
+const durL = L => L.reduce((a, [s, idx]) => a + idx.reduce((b, i) => b + s.items[i].d, 0), 0);
+const link = (m, v, s, i) => `#/${m}/${enc(v)}/${s.k}` + (i == null ? "" : `/${i}`);
+const COUNT = {};
 
-function navTracks(cur){
-  $("#tracks").innerHTML = `<a class="tk" href="#/" ${!cur ? 'aria-current="page"' : ""}>Tất cả<small>${talksOf(CAT.sessions)}</small></a>` +
-    CAT.tracks.map(t => `<a class="tk" href="#/${enc(t)}" ${t === cur ? 'aria-current="page"' : ""}>${esc(t)}<small>${talksOf(inTrack(t))}</small></a>`).join("");
+function navBar(m, cur){
+  navMode = m || navMode;
+  $("#tracks").innerHTML = `<span class="modes" role="tablist">${Object.entries(MODES).map(([k, lab]) =>
+      `<button class="md" data-m="${k}" aria-selected="${k === navMode}">${lab}</button>`).join("")}</span>` +
+    values(navMode).map(v => `<a class="tk" href="#/${navMode}/${enc(v)}" ${v === cur ? 'aria-current="page"' : ""}>${esc(v)}<small>${COUNT[navMode][v]}</small></a>`).join("");
+  document.querySelectorAll(".md").forEach(b => b.onclick = () => { navMode = b.dataset.m; store.set("mode", navMode); navBar(navMode, ""); });
   const a = $("#tracks [aria-current]"); if (a) a.scrollIntoView({block:"nearest", inline:"center"});
 }
 
-function talkRow(t, s, it, i){
-  return `<a class="talk" href="${talkLink(t, s, i)}"><span class="n">${i+1}</span>
+function talkRow(m, v, s, i, n){
+  const it = s.items[i];
+  return `<a class="talk" href="${link(m, v, s, i)}"><span class="n">${n+1}</span>
     ${it.th ? `<img loading="lazy" src="${esc(it.th)}" alt="">` : `<span class="ph"></span>`}
     <span><b>${it.w ? '<span class="wtag">Cả phiên</span>' : ""}${esc(it.t)}</b><span class="en">${esc(it.e)}</span>${it.p.length ? `<span class="who">${esc(it.p.join(", "))}</span>` : ""}</span>
     <span class="d">${clock(it.d)}</span></a>`;
 }
-function sessionCard(t, s){
-  const d = s.items.reduce((a, i) => a + i.d, 0);
+function sessionCard(m, v, s, idx){
+  const d = idx.reduce((a, i) => a + s.items[i].d, 0), many = idx.length > 12 && !openS.has(s.k);
+  const tags = [m !== "ht" && s.f && s.f !== s.e ? s.f : "", m === "hn" ? "" : s.c].filter(Boolean);
   return `<section class="session" id="${s.k}"><div class="sh"><h3>${esc(s.t)}</h3>${s.e !== s.t ? `<div class="en">${esc(s.e)}</div>` : ""}
-    <div class="tags">${s.f && s.f !== s.e ? `<span class="tag">${esc(s.f)}</span>` : ""}<span class="tag">${s.items.length} bài</span><span class="tag">${clock(d)}</span></div></div>
-    ${s.items.slice(0, s.items.length > 12 && !openS.has(s.k) ? 10 : 1e9).map((it, i) => talkRow(t, s, it, i)).join("")}
-    ${s.items.length > 12 && !openS.has(s.k) ? `<button class="more" data-open="${s.k}">Xem tất cả ${s.items.length} bài ▾</button>` : ""}</section>`;
+    <div class="tags">${tags.map(t => `<span class="tag">${esc(t)}</span>`).join("")}<span class="tag">${idx.length} bài</span><span class="tag">${clock(d)}</span></div></div>
+    ${idx.slice(0, many ? 10 : 1e9).map((i, n) => talkRow(m, v, s, i, n)).join("")}
+    ${many ? `<button class="more" data-open="${s.k}">Xem tất cả ${idx.length} bài ▾</button>` : ""}</section>`;
 }
 
 function home(){
-  navTracks("");
-  const all = CAT.sessions;
+  navBar(navMode, "");
+  const all = CAT.sessions.map(s => [s, s.items.map((_, i) => i)]);
+  const tiles = m => values(m).map(v => { const L = inGroup(m, v);
+    return `<a class="tile" href="#/${m}/${enc(v)}"><b>${esc(v)}</b><span>${countL(L)} bài · ${hrs(durL(L))} giờ</span></a>`; }).join("");
   $("#app").innerHTML = `<div class="head"><h1>Thư viện bài giảng ISAKOS</h1>
-      <p class="stats">Hội nghị, webinar và trình diễn phẫu thuật — phụ đề tiếng Việt, xếp theo chuyên đề.</p>
-      <p class="note" style="margin:4px 0 0">${talksOf(all)} bài giảng · ${hrs(durOf(all))} giờ video</p></div>
-    <div class="home">${CAT.tracks.map(t => { const L = inTrack(t);
-      return `<a class="tile" href="#/${enc(t)}"><b>${esc(t)}</b><span>${talksOf(L)} bài · ${L.length} phiên · ${hrs(durOf(L))} giờ</span></a>`; }).join("")}</div>`;
+      <p class="stats">Hội nghị, webinar và trình diễn phẫu thuật — phụ đề tiếng Việt, xếp theo chuyên đề, hội nghị và hình thức.</p>
+      <p class="note" style="margin:4px 0 0">${countL(all)} bài giảng · ${hrs(durL(all))} giờ video</p></div>
+    <h2 class="course">Theo chuyên đề</h2><div class="home">${tiles("cd")}</div>
+    <h2 class="course">Theo hội nghị / khóa học</h2><div class="home">${tiles("hn")}</div>
+    <h2 class="course">Theo hình thức</h2><div class="home">${tiles("ht")}</div>`;
 }
 
-function trackView(t, focus){
-  navTracks(t);
-  const L = inTrack(t), courses = [...new Set(L.map(s => s.c))];
-  const sel = store.get("course." + t, ""), cur = courses.includes(sel) ? sel : "";
-  const shown = L.filter(s => !cur || s.c === cur);
-  $("#app").innerHTML = `<div class="head"><div class="crumb"><a href="#/">Thư viện</a><span class="sep">›</span><span>Chuyên đề</span></div>
-      <h1>${esc(t)}</h1><p class="stats">${talksOf(L)} bài giảng · ${L.length} phiên · ${hrs(durOf(L))} giờ video</p>
-      ${courses.length > 1 ? `<div class="courses"><button class="cs" data-c="" aria-pressed="${!cur}">Tất cả hội nghị</button>${courses.map(c =>
-        `<button class="cs" data-c="${esc(c)}" aria-pressed="${c===cur}">${esc(c)}</button>`).join("")}</div>` : ""}</div>
-    ${courses.filter(c => !cur || c === cur).map(c => `<h2 class="course">${esc(c)}</h2>` + shown.filter(s => s.c === c).map(s => sessionCard(t, s)).join("")).join("")}`;
-  document.querySelectorAll(".cs").forEach(b => b.onclick = () => { store.set("course." + t, b.dataset.c); trackView(t); });
-  document.querySelectorAll(".more").forEach(b => b.onclick = () => { openS.add(b.dataset.open); const y = scrollY; trackView(t); scrollTo(0, y); });
+function listView(m, v, focus){
+  navBar(m, v);
+  const L = inGroup(m, v), key = "loc." + m + "." + v;
+  let f = {}; try { f = JSON.parse(store.get(key, "{}")); } catch(e) {}
+  // bộ lọc phụ: chủ đề con (chuyên đề), hội nghị (chuyên đề / hình thức), chuyên đề (hội nghị)
+  const topics = m === "cd" ? (CAT.topics[v] || []) : [];
+  const courses = m !== "hn" ? CAT.courses.filter(c => L.some(([s]) => s.c === c)) : [];
+  const tracks = m === "hn" ? CAT.tracks.filter(t => L.some(([s]) => s.tr[0] === t)) : [];
+  if (f.tp && !topics.includes(f.tp)) f.tp = ""; if (f.c && !courses.includes(f.c)) f.c = ""; if (f.t && !tracks.includes(f.t)) f.t = "";
+  const shown = L.filter(([s]) => (!f.tp || s.tp.some(([t, tp]) => t === v && tp === f.tp)) && (!f.c || s.c === f.c) && (!f.t || s.tr[0] === f.t));
+  const chips = (name, list, all) => list.length > 1 ? `<div class="courses">${[["", all], ...list.map(x => [x, x])].map(([x, lab]) =>
+      `<button class="cs" data-k="${name}" data-v="${esc(x)}" aria-pressed="${(f[name] || "") === x}">${esc(lab)}</button>`).join("")}</div>` : "";
+  const groups = m === "hn" ? (tracks.length ? tracks : ["Khác"]) : courses;
+  const gOf = s => m === "hn" ? s.tr[0] : s.c;
+  $("#app").innerHTML = `<div class="head"><div class="crumb"><a href="#/">Thư viện</a><span class="sep">›</span><span>${MODES[m]}</span></div>
+      <h1>${esc(v)}</h1><p class="stats">${countL(L)} bài giảng · ${L.length} phiên · ${hrs(durL(L))} giờ video</p>
+      ${chips("tp", topics, "Mọi chủ đề")}${chips("c", courses, "Mọi hội nghị")}${chips("t", tracks, "Mọi chuyên đề")}</div>
+    ${groups.map(g => { const G = shown.filter(([s]) => gOf(s) === g); return G.length ? `<h2 class="course">${esc(g)}</h2>` + G.map(([s, idx]) => sessionCard(m, v, s, idx)).join("") : ""; }).join("")
+      || `<div class="empty">Chưa có bài giảng trong mục này.</div>`}`;
+  document.querySelectorAll(".cs").forEach(b => b.onclick = () => { f[b.dataset.k] = b.dataset.v; store.set(key, JSON.stringify(f)); listView(m, v); });
+  document.querySelectorAll(".more").forEach(b => b.onclick = () => { openS.add(b.dataset.open); const y = scrollY; listView(m, v); scrollTo(0, y); });
   if (focus) { const el = document.getElementById(focus); if (el) { el.scrollIntoView({block:"start"}); el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1600); } }
 }
 
-async function talkView(t, k, i){
+async function talkView(m, v, k, i){
   const s = SES[k]; i = +i;
   if (!s || !s.items[i]) { $("#app").innerHTML = `<div class="empty">Không tìm thấy bài giảng. <a href="#/">Về thư viện</a></div>`; return; }
-  t = s.tr.includes(t) ? t : s.tr[0]; navTracks(t);
+  navBar(m, v);
   const it = s.items[i], start = it.s > 0 ? `?t=${Math.floor(it.s)}` : "";
+  const idx = m === "ht" ? s.items.map((_, j) => j).filter(j => s.items[j].f === v) : s.items.map((_, j) => j);
+  const pos = idx.indexOf(i);
   document.title = it.t + " · ISAKOS 2025";
-  const prev = i > 0 ? talkLink(t, s, i-1) : "", next = i < s.items.length - 1 ? talkLink(t, s, i+1) : "";
+  const prev = pos > 0 ? link(m, v, s, idx[pos-1]) : "", next = pos >= 0 && pos < idx.length - 1 ? link(m, v, s, idx[pos+1]) : "";
   $("#app").innerHTML = `
-    <div class="head" style="padding-bottom:0"><div class="crumb"><a href="#/">Thư viện</a><span class="sep">›</span><a href="#/${enc(t)}">${esc(t)}</a>
-      <span class="sep">›</span><span>${esc(s.c)}</span><span class="sep">›</span><a href="#/${enc(t)}/${s.k}">${esc(s.t)}</a></div></div>
+    <div class="head" style="padding-bottom:0"><div class="crumb"><a href="#/">Thư viện</a><span class="sep">›</span><span>${MODES[m]}</span><span class="sep">›</span>
+      <a href="#/${m}/${enc(v)}">${esc(v)}</a>${m !== "hn" ? `<span class="sep">›</span><span>${esc(s.c)}</span>` : ""}<span class="sep">›</span><a href="${link(m, v, s)}">${esc(s.t)}</a></div></div>
     <div class="player"><iframe src="https://drive.google.com/file/d/${it.g}/preview${start}" allow="autoplay; fullscreen" allowfullscreen title="${esc(it.t)}"></iframe></div>
     ${it.s > 0 ? `<p class="note">Bài này bắt đầu ở phút ${clock(it.s)} của video ghi cả phiên. Nếu video không tự nhảy tới, hãy kéo thanh thời gian tới ${clock(it.s)} hoặc mở trên Drive.</p>` : ""}
-    <div class="vh"><h1>${esc(it.t)}</h1><div class="en">${esc(it.e)}</div>
-      <div class="tags"><span class="tag">${esc(s.c)}</span>${s.f ? `<span class="tag">${esc(s.f)}</span>` : ""}<span class="tag">Bài ${i+1}/${s.items.length} của phiên</span><span class="tag">${clock(it.d)}</span></div>
+    <div class="vh"><h1>${it.w ? '<span class="wtag">Cả phiên</span>' : ""}${esc(it.t)}</h1><div class="en">${esc(it.e)}</div>
+      <div class="tags"><span class="tag">${esc(s.c)}</span><span class="tag">${esc(it.f)}</span>${s.tr.filter(t => t !== "Khác").map(t => `<span class="tag">${esc(t)}</span>`).join("")}
+        <span class="tag">Bài ${pos+1}/${idx.length} của phiên</span><span class="tag">${clock(it.d)}</span></div>
       <div class="actions"><a class="btn" href="${prev || "#"}" aria-disabled="${!prev}">← Bài trước</a><a class="btn" href="${next || "#"}" aria-disabled="${!next}">Bài tiếp theo →</a>
         <a class="btn p" href="https://drive.google.com/file/d/${it.g}/view${start}" target="_blank" rel="noopener">Mở trên Google Drive ↗</a>
         <button class="btn" id="share" type="button">Sao chép link</button></div></div>
     <div class="cols"><div id="main"></div><aside>
-      <div class="panel"><h2>Các bài trong phiên (${s.items.length})</h2><div class="plist">${s.items.map((x, j) =>
-        `<a href="${talkLink(t, s, j)}" aria-current="${j===i}"><span class="n">${j+1}</span><span>${esc(x.t)}<small>${esc(x.p.join(", "))}${x.p.length ? " · " : ""}${clock(x.d)}</small></span></a>`).join("")}</div></div>
+      <div class="panel"><h2>Các bài trong phiên (${idx.length})</h2><div class="plist">${idx.map((j, n) => { const x = s.items[j];
+        return `<a href="${link(m, v, s, j)}" aria-current="${j===i}"><span class="n">${n+1}</span><span>${x.w ? '<span class="wtag">Cả phiên</span>' : ""}${esc(x.t)}<small>${esc(x.p.join(", "))}${x.p.length ? " · " : ""}${clock(x.d)}</small></span></a>`; }).join("")}</div></div>
       <div id="spk"></div></aside></div>`;
   $("#share").onclick = async () => { try { await navigator.clipboard.writeText(location.href); toast("Đã sao chép link bài này"); } catch(e) { prompt("Link:", location.href); } };
   let d = { sum: [], spk: [] };
   try { d = await (await fetch(`data/v/${it.v}.json`)).json(); } catch(e) {}
-  if (route().parts.join("/") !== [t, k, String(i)].join("/")) return;
+  if (route().parts.slice(-2).join("/") !== [k, String(i)].join("/")) return;
   const whole = s.items.filter(x => x.v === it.v).length > 1 || it.ch;
   $("#main").innerHTML = d.sum.length ? `<div class="panel"><h2>${whole ? "Nội dung chính của cả phiên" : "Nội dung chính"}</h2><ul>${d.sum.map(x => `<li>${esc(x)}</li>`).join("")}</ul>
     <p class="note">Tóm tắt do AI tạo từ lời giảng.</p></div>` : "";
@@ -252,23 +286,26 @@ async function talkView(t, k, i){
 function hl(text, words){ let out = esc(text); words.forEach(w => { if (w.length < 2) return;
   const f = fold(text), i = f.indexOf(w); if (i >= 0) out = esc(text.slice(0, i)) + "<mark>" + esc(text.slice(i, i + w.length)) + "</mark>" + esc(text.slice(i + w.length)); }); return out; }
 function search(q){
-  navTracks("");
+  navBar(navMode, "");
   const ws = fold(q).trim().split(/\s+/).filter(Boolean), res = [];
   CAT.sessions.forEach(s => s.items.forEach((it, i) => { if (ws.every(w => it._f.includes(w) || s._f.includes(w))) res.push([s, it, i]); }));
   $("#app").innerHTML = `<div class="head"><h1>Kết quả cho “${esc(q)}”</h1><p class="stats">${res.length} bài giảng</p></div>` +
-    (res.length ? res.slice(0, 200).map(([s, it, i]) => `<a class="res" href="${talkLink("", s, i)}"><div class="crumb"><span>${esc(s.tr[0])}</span><span class="sep">›</span><span>${esc(s.c)}</span><span class="sep">›</span><span>${esc(s.t)}</span></div>
+    (res.length ? res.slice(0, 200).map(([s, it, i]) => `<a class="res" href="${link("cd", s.tr[0], s, i)}"><div class="crumb"><span>${esc(s.tr[0])}</span><span class="sep">›</span><span>${esc(s.c)}</span><span class="sep">›</span><span>${esc(s.t)}</span></div>
       <b>${hl(it.t, ws)}</b><div class="note">${esc(it.e)}${it.p.length ? " · " + esc(it.p.join(", ")) : ""} · ${clock(it.d)}</div></a>`).join("") : `<div class="empty">Không tìm thấy bài giảng phù hợp.</div>`);
 }
 
 let last = "";
 function render(){
-  const { parts, q } = route(), key = parts.join("/");
-  if (last && !last.includes("/") && key !== last) listScroll[last] = scrollY;
+  let { parts, q } = route();
+  if (parts.length && !MODES[parts[0]]) parts = ["cd", ...parts];          // link cũ dạng #/<chuyên đề>/…
+  const key = parts.join("/");
+  if (last && last.split("/").length === 2 && key !== last) listScroll[last] = scrollY;
   if (q) { search(q); }
   else if (!parts.length) { document.title = "ISAKOS 2025 · Lưu hành nội bộ CTCH BVQY 175"; home(); }
-  else if (parts.length === 1) { document.title = parts[0] + " · ISAKOS 2025"; trackView(parts[0]); scrollTo(0, listScroll[parts[0]] || 0); }
-  else if (parts.length === 2) { trackView(parts[0], parts[1]); }
-  else { talkView(parts[0], parts[1], parts[2]); scrollTo(0, 0); }
+  else if (parts.length === 1) { navMode = parts[0]; home(); }
+  else if (parts.length === 2) { document.title = parts[1] + " · ISAKOS 2025"; listView(parts[0], parts[1]); scrollTo(0, listScroll[key] || 0); }
+  else if (parts.length === 3) { listView(parts[0], parts[1], parts[2]); }
+  else { talkView(parts[0], parts[1], parts[2], parts[3]); scrollTo(0, 0); }
   last = key;
 }
 let qT;
@@ -277,8 +314,9 @@ $("#q").addEventListener("input", e => { clearTimeout(qT); qT = setTimeout(() =>
 
 fetch("data/catalog.json").then(r => r.json()).then(j => {
   CAT = j;
-  CAT.sessions.forEach(s => { SES[s.k] = s; s._f = fold([s.t, s.e, s.c, s.tr.join(" "), s.f].join(" "));
-    s.items.forEach(it => it._f = fold([it.t, it.e, it.p.join(" "), it.m].join(" "))); });
+  CAT.sessions.forEach(s => { SES[s.k] = s; s._f = fold([s.t, s.e, s.c, s.tr.join(" "), s.f, s.tp.map(x => x[1]).join(" ")].join(" "));
+    s.items.forEach(it => it._f = fold([it.t, it.e, it.p.join(" "), it.m, it.f].join(" "))); });
+  for (const m of Object.keys(MODES)) { COUNT[m] = {}; values(m).forEach(v => COUNT[m][v] = countL(inGroup(m, v))); }
   $("#foot").textContent = `Bản quyền nội dung thuộc ISAKOS và các diễn giả. Cập nhật ${j.updated}. Dịch bởi Bs. Bảo Long.`;
   addEventListener("hashchange", render); render();
 }).catch(() => { $("#app").innerHTML = `<div class="empty">Thư viện đang được cập nhật, vui lòng quay lại sau.</div>`; });
