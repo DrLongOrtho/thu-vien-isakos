@@ -181,8 +181,10 @@ function inGroup(m, v){                      // → [[phiên, [số thứ tự b
     if (m === "ht") { idx = idx.filter(i => s.items[i].f === v); if (!idx.length) return null; }
     return [s, idx]; }).filter(Boolean);
 }
-const countL = L => L.reduce((a, [s, idx]) => a + idx.length, 0);
-const durL = L => L.reduce((a, [s, idx]) => a + idx.reduce((b, i) => b + s.items[i].d, 0), 0);
+const ikey = it => it.v + "@" + it.s;            // 1 bài có thể nằm ở nhiều nhóm → đếm 1 lần
+const uniq = L => { const m = new Map(); L.forEach(([s, idx]) => idx.forEach(i => m.set(ikey(s.items[i]), s.items[i]))); return [...m.values()]; };
+const countL = L => uniq(L).length;
+const durL = L => uniq(L).reduce((a, it) => a + it.d, 0);
 const link = (m, v, s, i) => `#/${m}/${enc(v)}/${s.k}` + (i == null ? "" : `/${i}`);
 const COUNT = {};
 
@@ -241,7 +243,10 @@ function listView(m, v, focus){
   $("#app").innerHTML = `<div class="head"><div class="crumb"><a href="#/">Thư viện</a><span class="sep">›</span><span>${MODES[m]}</span></div>
       <h1>${esc(v)}</h1><p class="stats">${countL(L)} bài giảng · ${L.length} phiên · ${hrs(durL(L))} giờ video</p>
       ${chips("tp", topics, "Mọi chủ đề")}${chips("c", courses, "Mọi hội nghị")}${chips("t", tracks, "Mọi chuyên đề")}</div>
-    ${groups.map(g => { const G = shown.filter(([s]) => gOf(s) === g); return G.length ? `<h2 class="course">${esc(g)}</h2>` + G.map(([s, idx]) => sessionCard(m, v, s, idx)).join("") : ""; }).join("")
+    ${groups.map(g => { const seen = new Set();
+        const G = shown.filter(([s]) => gOf(s) === g).map(([s, idx]) => [s, idx.filter(i => !seen.has(ikey(s.items[i])) && seen.add(ikey(s.items[i])))])
+                       .filter(([s, idx]) => idx.length);
+        return G.length ? `<h2 class="course">${esc(g)}</h2>` + G.map(([s, idx]) => sessionCard(m, v, s, idx)).join("") : ""; }).join("")
       || `<div class="empty">Chưa có bài giảng trong mục này.</div>`}`;
   document.querySelectorAll(".cs").forEach(b => b.onclick = () => { f[b.dataset.k] = b.dataset.v; store.set(key, JSON.stringify(f)); listView(m, v); });
   document.querySelectorAll(".more").forEach(b => b.onclick = () => { openS.add(b.dataset.open); const y = scrollY; listView(m, v); scrollTo(0, y); });
