@@ -186,7 +186,7 @@ function talkRow(t, s, it, i){
 function sessionCard(t, s){
   const d = s.items.reduce((a, i) => a + i.d, 0);
   return `<section class="session" id="${s.k}"><div class="sh"><h3>${esc(s.t)}</h3>${s.e !== s.t ? `<div class="en">${esc(s.e)}</div>` : ""}
-    <div class="tags">${s.f ? `<span class="tag">${esc(s.f)}</span>` : ""}<span class="tag">${s.items.length} bài</span><span class="tag">${clock(d)}</span></div></div>
+    <div class="tags">${s.f && s.f !== s.e ? `<span class="tag">${esc(s.f)}</span>` : ""}<span class="tag">${s.items.length} bài</span><span class="tag">${clock(d)}</span></div></div>
     ${s.items.slice(0, s.items.length > 12 && !openS.has(s.k) ? 10 : 1e9).map((it, i) => talkRow(t, s, it, i)).join("")}
     ${s.items.length > 12 && !openS.has(s.k) ? `<button class="more" data-open="${s.k}">Xem tất cả ${s.items.length} bài ▾</button>` : ""}</section>`;
 }
