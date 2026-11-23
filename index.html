@@ -6,7 +6,11 @@
 <meta name="robots" content="noindex, nofollow">
 <title>ISAKOS 2025 · Lưu hành nội bộ CTCH BVQY 175</title>
 <meta name="description" content="Thư viện video bài giảng ISAKOS có phụ đề tiếng Việt, lưu hành nội bộ cho các bác sĩ CTCH BVQY 175.">
-<link rel="icon" type="image/png" href="logo-light.png">
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#083d55">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://i.vimeocdn.com" crossorigin>
@@ -24,7 +28,8 @@
 /* Hallmark · dismissed F7 · .theme, .md, .tk, .cs and .btn are controls; .modes is the frame of the mode tabs and .spin is the loader */
 /* Hallmark · dropped logo-dark.png, .logo.d · the header is deep teal in both modes, so the white-disc logo serves both and logo-dark.png stays in the folder unused */
 /* Hallmark · reworded "1993" to "1.993" · every count now takes the Vietnamese thousands separator, the same figure */
-/* Hallmark · reworded "Hội nghị, webinar và trình diễn phẫu thuật — phụ đề tiếng Việt, …" to "… phẫu thuật có phụ đề tiếng Việt, …" · 19 names the dash */
+/* Hallmark · reworded the home lede to the user's byline "Dịch và biên soạn bởi Bs. Hoàng Trọng Bảo Long" · the user's own words, 23/11/2026 */
+/* Hallmark · footer: a deep teal close, the wordmark and the group logo beside three credits (translator, update date, rights), the facets on its right edge */
 
 :root {
   color-scheme: light;
@@ -302,7 +307,20 @@ mark { padding-inline: var(--space-3xs); border-radius: var(--space-3xs); backgr
 .spin { width: 18px; height: 18px; flex: none; border: 2px solid var(--color-rule); border-top-color: var(--color-accent); border-radius: var(--radius-pill); animation: spin 0.9s linear infinite; }
 @keyframes spin { to { transform: rotate(1turn); } }
 
-footer { padding-block: var(--space-xl) var(--space-2xl); background: var(--color-paper-2); color: var(--color-muted); font-size: var(--text-sm); }
+footer { position: relative; overflow: clip; background: var(--color-brand-2); color: var(--color-on-brand); --color-focus: var(--color-gold); }
+footer > .facets { position: absolute; top: 0; right: 0; width: 38%; height: 100%; }
+.foot-in { position: relative; z-index: var(--z-raised); display: grid; gap: var(--space-xl); padding-block: var(--space-2xl); }
+.foot-in > * { max-width: 58%; }
+.foot-brand { display: flex; align-items: center; gap: var(--space-md); }
+.foot-brand .logo { width: 56px; height: 56px; }
+.foot-brand b { display: block; font-size: var(--text-xl); font-weight: 800; line-height: 1.15; letter-spacing: -0.01em; }
+.foot-brand .yr { color: var(--color-gold); }
+.foot-brand small { display: block; margin-top: var(--space-3xs); font-size: var(--text-sm); color: var(--color-on-brand-muted); }
+.credits { display: flex; flex-wrap: wrap; row-gap: var(--space-md); margin: 0; }
+.credits > div { padding-inline: var(--space-lg); border-left: 1px solid var(--color-brand-rule); }
+.credits > div:first-child { padding-left: 0; border-left: 0; }
+.credits dt { font-size: var(--text-sm); color: var(--color-on-brand-muted); }
+.credits dd { margin: var(--space-2xs) 0 0; font-weight: 600; }
 #toast { position: fixed; left: 50%; bottom: var(--space-lg); z-index: var(--z-toast); translate: -50% 0; padding: var(--space-xs) var(--space-md); border-radius: var(--radius-pill); background: var(--color-ink); color: var(--color-paper); font-size: var(--text-sm); font-weight: 600; opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity var(--dur-short) var(--ease-out), transform var(--dur-short) var(--ease-out); }
 #toast.on { opacity: 1; transform: none; }
 
@@ -319,6 +337,9 @@ footer { padding-block: var(--space-xl) var(--space-2xl); background: var(--colo
   .mast > .facets { position: static; display: block; width: 100%; height: 160px; }
   .rows { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-auto-flow: row; }
   .band:not(.mast) > .facets { display: none; }
+  .foot-in { padding-block: var(--space-xl); }
+  .foot-in > * { max-width: none; }
+  footer > .facets { position: static; display: block; width: 100%; height: 96px; }
 }
 @media (max-width: 720px) {
   :root { --thumb: 96px; --header-h: 116px; --sticky-top: var(--header-h); }
@@ -354,6 +375,9 @@ footer { padding-block: var(--space-xl) var(--space-2xl); background: var(--colo
   .cards li:first-child { grid-column: auto; }
   .row { grid-template-columns: auto auto minmax(0, 1fr); column-gap: var(--space-md); row-gap: var(--space-2xs); }
   .row .nm { grid-column: 1 / -1; }
+  .credits { flex-direction: column; }
+  .credits > div { padding: var(--space-sm) 0 0; border-left: 0; border-top: 1px solid var(--color-brand-rule); }
+  .credits > div:first-child { padding-top: 0; border-top: 0; }
   .row .num { text-align: left; min-width: 0; }
   .cards { gap: 0; }
   .cards li:first-child { margin-bottom: var(--space-md); }
@@ -384,7 +408,15 @@ footer { padding-block: var(--space-xl) var(--space-2xl); background: var(--colo
 </div></header>
 <nav class="tracks" aria-label="Cách xem: chuyên đề, hội nghị, hình thức"><div class="wrap" id="tracks"></div></nav>
 <main id="app" tabindex="-1"><div class="wrap"><div class="empty loading" role="status"><span class="spin keep-motion" aria-hidden="true"></span>Đang tải thư viện…</div></div></main>
-<footer><div class="wrap" id="foot">Bản quyền nội dung thuộc ISAKOS và các diễn giả. Dịch bởi Bs. Bảo Long.</div></footer>
+<footer><div class="wrap foot-in" id="foot">
+  <div class="foot-brand"><img class="logo" src="logo-light.png" width="56" height="56" alt="">
+    <p><b>ISAKOS 20<span class="yr">25</span></b><small>Lưu hành nội bộ cho các bác sĩ CTCH BVQY 175</small></p></div>
+  <dl class="credits">
+    <div><dt>Dịch và biên soạn</dt><dd>Bs. Hoàng Trọng Bảo Long</dd></div>
+    <div id="updrow" hidden><dt>Cập nhật</dt><dd><time id="upd"></time></dd></div>
+    <div><dt>Bản quyền nội dung</dt><dd>ISAKOS và các diễn giả</dd></div>
+  </dl>
+</div></footer>
 <div id="toast" role="status" aria-live="polite"></div>
 <script>
 const $ = s => document.querySelector(s);
@@ -415,6 +447,8 @@ const facets = rows => { const s = 100, h = s * 0.866; let p = "";
 const MAST = [".....d..mt.oc.rgs", "....d.d.sgo.btmor", "...d..mo.rtg.dcbo", "..d..d.gbo.smr.tg", ".d...cr.t.gomb.sr"];
 const BAND = ["....d.mtoc.rg", "...d.dsgo.btm", "..d..or.tgdcb"];
 const CARD = ["..tor", ".dgcb"];
+const FOOT = ["...d.mtoc.rg", "..d.dsgo.btm", ".d..or.tgdcb"];
+document.querySelector("footer").insertAdjacentHTML("beforeend", facets(FOOT));
 
 let CAT = null, SES = {}, listScroll = {}, openS = new Set();
 $("#theme").onclick = () => {
@@ -483,7 +517,7 @@ function home(){
       `<li><a class="row${bars ? "" : " s"}" href="#/${m}/${enc(v)}"><span class="nm">${esc(v)}</span><span class="num">${nf(n)}<small>bài</small></span><span class="num">${hrs(d)}<small>giờ</small></span>${bars ? `<span class="bar" aria-hidden="true"><i style="--w:${(d / top * 100).toFixed(1)}%"></i></span>` : ""}</a></li>`).join("")}</ol>`;
   $("#app").innerHTML = `<section class="band mast"><div class="wrap mast-in"><div class="mast-text">
       <h1>Thư viện bài giảng<br>ISAKOS</h1>
-      <p class="lead">Hội nghị, webinar và trình diễn phẫu thuật có phụ đề tiếng Việt, xếp theo chuyên đề, hội nghị và hình thức.</p>
+      <p class="lead">Dịch và biên soạn bởi Bs. Hoàng Trọng Bảo Long</p>
       <p class="figs">${fig(nf(countL(all)), "bài giảng")}${fig(hrs(durL(all)), "giờ video")}</p></div></div>
       ${facets(MAST)}</section>
     <div class="wrap idx">
@@ -602,7 +636,7 @@ fetch("data/catalog.json").then(r => r.json()).then(j => {
   CAT.sessions.forEach(s => { SES[s.k] = s; s._f = fold([s.t, s.e, s.c, s.tr.join(" "), s.f, s.tp.map(x => x[1]).join(" ")].join(" "));
     s.items.forEach(it => it._f = fold([it.t, it.e, it.p.join(" "), it.m, it.f].join(" "))); });
   for (const m of Object.keys(MODES)) { COUNT[m] = {}; values(m).forEach(v => COUNT[m][v] = countL(inGroup(m, v))); }
-  $("#foot").textContent = `Bản quyền nội dung thuộc ISAKOS và các diễn giả. Cập nhật ${j.updated}. Dịch bởi Bs. Bảo Long.`;
+  const u = $("#upd"); u.textContent = j.updated; u.dateTime = String(j.updated).split("/").reverse().join("-"); $("#updrow").hidden = false;
   addEventListener("hashchange", () => swap(render)); render();
 }).catch(() => { $("#app").innerHTML = `<div class="wrap"><div class="empty" role="alert">Thư viện đang được cập nhật, vui lòng quay lại sau.</div></div>`; });
 </script>
